@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>期末考試場資訊看板-佈局優化版</title>
+    <style>
+        /* 整體背景：暖陽米色 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #fdf6e3 !important; 
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主容器 */
+        .container {
+            background-color: #fffbf0;
+            width: 1280px; 
+            min-height: 720px;
+            padding: 40px 50px;
+            border-radius: 50px;
+            box-shadow: 0 25px 50px rgba(184, 134, 11, 0.1);
+            display: flex;
+            flex-direction: column;
+            border: 6px solid #eee8d5;
+            box-sizing: border-box;
+        }
+
+        .main-content {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        /* 左側：時鐘區 */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-right: 3px dashed #eee8d5;
+            padding-right: 30px;
+        }
+
+        #date-display {
+            font-size: 32px;
+            color: #657b83;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+
+        #clock-wrapper {
+            background-color: #faebcc;
+            padding: 40px 20px;
+            border-radius: 35px;
+            box-shadow: inset 3px 3px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e6dcb8;
+            text-align: center;
+            width: 100%;
+        }
+
+        #clock {
+            font-size: 90px;
+            font-weight: 900;
+            color: #586e75;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
+        /* 右側：考程區 */
+        .right-panel {
+            flex: 2.2; /* 增加右側比例確保不換行 */
+            padding-left: 40px;
+        }
+
+        .header-row {
+            display: flex;
+            font-weight: bold;
+            color: #93a1a1;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            white-space: nowrap; /* 強制不換行 */
+        }
+
+        /* 科目輸入框：微調大小 */
+        .subject-input {
+            background: #fdf6e3;
+            border: 3px solid #d6bd8d;
+            padding: 8px;
+            border-radius: 15px;
+            width: 140px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 32px; 
+            color: #856404;
+            outline: none;
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
+
+        /* 考試時段：微調至 32px 確保空間充足 */
+        .time-slot {
+            margin-left: 20px;
+            font-size: 32px; 
+            color: #586e75;
+            font-weight: bold;
+            border-bottom: 3px solid #eee8d5;
+            padding: 5px 10px;
+            outline: none;
+            min-width: 350px;
+        }
+
+        /* 資料夾圖案按鈕 */
+        .folder-btn {
+            font-size: 30px;
+            cursor: pointer;
+            margin-left: 10px;
+            background: none;
+            border: none;
+            padding: 0;
+            transition: transform 0.2s;
+            vertical-align: middle;
+        }
+        .folder-btn:hover { transform: scale(1.2); }
+
+        /* 播放器區域 */
+        #audio-area {
+            margin: -10px 0 15px 160px;
+            display: none;
+        }
+        #audio-player {
+            width: 100%;
+            height: 35px;
+        }
+
+        .divider {
+            height: 2px;
+            background: #eee8d5;
+            margin: 20px 0;
+        }
+
+        /* 出缺席紀錄區 */
+        .attendance-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .att-box {
+            display: flex;
+            align-items: center;
+            font-size: 26px;
+            color: #657b83;
+        }
+
+        .label { font-weight: bold; width: 120px; }
+
+        /* 統一方框與字體 */
+        .data-box {
+            width: 110px;
+            height: 60px;
+            line-height: 60px;
+            border: 2px solid #d6bd8d;
+            border-radius: 12px;
+            font-size: 32px;
+            text-align: center;
+            font-weight: bold;
+            color: #586e75;
+            background: #faebcc;
+            box-sizing: border-box;
+            outline: none;
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+            display: inline-block;
+        }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+
+        .absent-style { background: #f9ebea; border-color: #e6b0aa; color: #b22222; }
+        .present-style { background: #d5e8d4; border-color: #b9d6b5; color: #2d5a27; }
+
+        /* 底部提醒文字 */
+        .reminder-banner {
+            margin-top: 20px;
+            padding: 15px;
+            border-top: 3px double #eee8d5;
+            text-align: center;
+            font-size: 40px;
+            font-weight: 900;
+            color: #704214; 
+            letter-spacing: 4px;
+        }
+
+        .hint {
+            color: #93a1a1;
+            font-size: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="main-content">
+        <div class="left-panel">
+            <div id="date-display">載入中...</div>
+            <div id="clock-wrapper">
+                <div id="clock">00:00:00</div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="header-row">
+                <span style="width: 140px; text-align: center;">考試科目</span>
+                <span style="flex-grow: 1; text-align: center;">考 試 時 段</span>
+            </div>
+
+            <div class="schedule-list">
+                <div class="schedule-item">
+                    <input type="text" class="subject-input" value="自然">
+                    <div class="time-slot" contenteditable="true">08 : 45 ～ 09 : 25</div>
+                </div>
+                <div class="schedule-item">
+                    <input type="text" class="subject-input" value="國語">
+                    <div class="time-slot" contenteditable="true">09 : 35 ～ 10 : 25</div>
+                </div>
+                <div class="schedule-item">
+                    <input type="text" class="subject-input" value="英文">
+                    <div class="time-slot" contenteditable="true">10 : 30 ～ 11 : 10</div>
+                    <button class="folder-btn" title="選取英聽檔案" onclick="document.getElementById('audio-upload').click()">📁</button>
+                    <input type="file" id="audio-upload" accept="audio/*" style="display:none" onchange="loadAudio(this)">
+                </div>
+                <div id="audio-area">
+                    <audio id="audio-player" controls></audio>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="attendance-area">
+                <div class="att-box">
+                    <span class="label">應到人數</span>
+                    <input type="number" id="total" class="data-box" value="25" oninput="calculate()">
+                    <span style="margin-left:10px">人</span>
+                </div>
+                <div class="att-box">
+                    <span class="label">他場考試</span>
+                    <input type="number" class="data-box" value="0">
+                    <span style="margin-left:10px">人</span>
+                </div>
+                <div class="att-box">
+                    <span class="label" style="color:#b22222;">未到人數</span>
+                    <input type="number" id="absent" class="data-box absent-style" value="0" oninput="calculate()">
+                    <span style="margin-left:10px">人</span>
+                </div>
+                <div class="att-box">
+                    <span class="label">實到人數</span>
+                    <span id="present" class="data-box present-style">25</span>
+                    <span style="margin-left:10px">人</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reminder-banner">
+        ✍️ 記得檢查考卷，祝你考試順利 🍀
+    </div>
+    <p class="hint">※ 點擊文字或方框可編輯；點擊 📁 可播放英聽</p>
+</div>
+
+<script>
+    function updateClock() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+        const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
+        const day = dayNames[now.getDay()];
+        document.getElementById('date-display').innerText = `${year}年 ${month}月 ${date}日 (週${day})`;
+
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('clock').innerText = `${h}:${m}:${s}`;
+    }
+
+    function calculate() {
+        const total = parseInt(document.getElementById('total').value) || 0;
+        const absent = parseInt(document.getElementById('absent').value) || 0;
+        const present = total - absent;
+        document.getElementById('present').innerText = present >= 0 ? present : 0;
+    }
+
+    function loadAudio(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const player = document.getElementById('audio-player');
+                const area = document.getElementById('audio-area');
+                player.src = e.target.result;
+                area.style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
+
+</body>
+</html>
