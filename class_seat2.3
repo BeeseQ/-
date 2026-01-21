@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>班級座位表 - 指定座位最終進階版</title>
+    <style>
+        :root {
+            --boy-color: #e3f2fd;
+            --boy-text: #1565c0;
+            --girl-color: #fff1f2;
+            --girl-text: #be123c;
+            --label-bg: #475569;
+            --accent: #f59e0b; /* 指定座位的顏色 */
+            --front-accent: #0ea5e9; /* 視力優先的顏色 */
+        }
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .controls { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; width: 100%; max-width: 700px; border: 1px solid #e2e8f0; }
+        .control-section { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0; }
+        .control-title { font-weight: bold; margin-bottom: 8px; color: #1e293b; display: flex; align-items: center; gap: 5px; }
+        
+        .input-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; }
+        .num-input { width: 50px; }
+        .text-input { width: 250px; text-align: left; }
+
+        .btn-add { background-color: #64748b; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .btn-del { background-color: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+        .btn-main { background-color: #2563eb; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%; transition: 0.2s; margin-top: 10px; }
+        .btn-main:hover { background-color: #1d4ed8; }
+
+        .blackboard { width: 100%; max-width: 600px; background: #334155; color: white; text-align: center; padding: 12px; font-size: 1.4em; font-weight: bold; border-radius: 4px; margin-bottom: 30px; }
+        .classroom-container { display: flex; gap: 50px; justify-content: center; align-items: flex-start; }
+        .column { display: flex; flex-direction: column; gap: 20px; }
+        .group-box { background: white; border: 1px solid #cbd5e1; padding: 10px; border-radius: 8px; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .seats-grid { display: grid; gap: 6px; }
+        .grid-2x2 { grid-template-columns: repeat(2, 60px); }
+        .grid-3-2 { grid-template-columns: repeat(3, 60px); }
+
+        .seat { width: 60px; height: 60px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em; border: 1px solid rgba(0,0,0,0.1); position: relative; }
+        .seat span { font-size: 0.65em; font-weight: normal; margin-bottom: 2px; color: #64748b; }
+        
+        .boy { background-color: var(--boy-color); color: var(--boy-text); }
+        .girl { background-color: var(--girl-color); color: var(--girl-text); }
+        
+        .group-label { background: var(--label-bg); color: white; padding: 8px 4px; font-size: 0.9em; writing-mode: vertical-rl; text-orientation: upright; border-radius: 4px; letter-spacing: 2px; }
+        .label-left { margin-right: 10px; }
+        .label-right { margin-left: 10px; }
+        
+        /* 視覺標記 */
+        .mark-fixed { outline: 3px solid var(--accent); z-index: 1; }
+        .mark-fixed::before { content: "📌"; position: absolute; top: -10px; right: -5px; font-size: 12px; }
+        .mark-front { outline: 2px solid var(--front-accent); }
+        .mark-front::before { content: "👓"; position: absolute; top: -10px; right: -5px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <div class="control-section">
+            <div class="control-title">📌 指定學生座位</div>
+            <div id="fixed-list">
+                </div>
+            <button class="btn-add" onclick="addFixedRow()">＋ 新增指定座位</button>
+        </div>
+
+        <div class="control-section">
+            <div class="control-title">👓 視力優先（第一、六組座位）</div>
+            <input type="text" id="front-row-input" class="text-input" placeholder="輸入座號，用空格隔開 (如: 5 18)">
+        </div>
+
+        <div class="control-section">
+            <div class="control-title">🚫 多對避開名單</div>
+            <div id="pair-list">
+                <div class="input-row">
+                    <input type="number" class="p1 num-input"> <span>不與</span> <input type="number" class="p2 num-input"> <span>同組</span>
+                    <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
+                </div>
+            </div>
+            <button class="btn-add" onclick="addPairRow()">＋ 新增避開組合</button>
+        </div>
+
+        <button class="btn-main" onclick="generate()">🔀 開始隨機排座</button>
+    </div>
+
+    <div class="blackboard">黑板 (電子大屏)</div>
+    <div class="classroom-container">
+        <div class="column" id="left-col"></div>
+        <div class="column" id="right-col"></div>
+    </div>
+
+<script>
+const GENDER_RULES = { 'A': 'girl', 'B': 'boy', 'C': 'boy', 'D': 'girl', 'E': 'boy' };
+
+function addFixedRow() {
+    const container = document.getElementById('fixed-list');
+    const row = document.createElement('div');
+    row.className = 'input-row';
+    row.innerHTML = `
+        <span>座號</span><input type="number" class="fix-num num-input">
+        <span>分配到</span>
+        <select class="fix-group"><option value="一">第一組</option><option value="二">第二組</option><option value="三">第三組</option><option value="四">第四組</option><option value="五">第五組</option><option value="六">第六組</option></select>
+        <select class="fix-pos"><option value="A">位置 A (女)</option><option value="B">位置 B (男)</option><option value="C">位置 C (男)</option><option value="D">位置 D (女)</option><option value="E">位置 E (男,限第3組)</option></select>
+        <button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
+    container.appendChild(row);
+}
+
+function addPairRow() {
+    const container = document.getElementById('pair-list');
+    const row = document.createElement('div');
+    row.className = 'input-row';
+    row.innerHTML = `<input type="number" class="p1 num-input"> <span>不與</span> <input type="number" class="p2 num-input"> <span>同組</span> <button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
+    container.appendChild(row);
+}
+
+function generate() {
+    // 收集指定座位
+    const fixedSeats = {}; // 格式: { "一_A": 15 }
+    const fixedStudents = new Set();
+    let genderError = false;
+
+    document.querySelectorAll('#fixed-list .input-row').forEach(row => {
+        const num = parseInt(row.querySelector('.fix-num').value);
+        const group = row.querySelector('.fix-group').value;
+        const pos = row.querySelector('.fix-pos').value;
+        if (!isNaN(num)) {
+            const gender = num <= 13 ? 'boy' : 'girl';
+            if (GENDER_RULES[pos] !== gender) { genderError = `座號 ${num} 性別與位置 ${pos} 不符`; }
+            if (pos === 'E' && group !== '三') { genderError = `位置 E 僅限第三組`; }
+            fixedSeats[`${group}_${pos}`] = num;
+            fixedStudents.add(num);
+        }
+    });
+
+    if (genderError) { alert(genderError); return; }
+
+    // 收集其餘名單
+    const frontInput = document.getElementById('front-row-input').value;
+    const frontRaw = frontInput.split(/[ ,]+/).map(n => parseInt(n)).filter(n => !isNaN(n) && !fixedStudents.has(n));
+    const pairRows = document.querySelectorAll('#pair-list .input-row');
+    const restrictions = [];
+    pairRows.forEach(row => {
+        const v1 = parseInt(row.querySelector('.p1').value);
+        const v2 = parseInt(row.querySelector('.p2').value);
+        if (!isNaN(v1) && !isNaN(v2)) restrictions.push([v1, v2]);
+    });
+
+    let resultGroups = [];
+    let attempts = 0;
+
+    while (attempts < 2000) {
+        attempts++;
+        let boysPool = Array.from({length: 13}, (_, i) => i + 1).filter(n => !fixedStudents.has(n) && !frontRaw.includes(n));
+        let girlsPool = Array.from({length: 12}, (_, i) => i + 14).filter(n => !fixedStudents.has(n) && !frontRaw.includes(n));
+        const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+        shuffle(boysPool); shuffle(girlsPool);
+        
+        let curFrontBoys = frontRaw.filter(n => n <= 13);
+        let curFrontGirls = frontRaw.filter(n => n > 13);
+        shuffle(curFrontBoys); shuffle(curFrontGirls);
+
+        let tempGroups = [];
+        let conflict = false;
+        const order = ['一', '六', '二', '五', '三', '四'];
+
+        for (let gId of order) {
+            let res = { id: gId, seats: {} };
+            let seatsToFill = (gId === '三') ? ['A','B','C','D','E'] : ['A','B','C','D'];
+            
+            for (let p of seatsToFill) {
+                if (fixedSeats[`${gId}_${p}`]) {
+                    res.seats[p] = fixedSeats[`${gId}_${p}`];
+                } else {
+                    const targetGender = GENDER_RULES[p];
+                    const isFrontGroup = (gId === '一' || gId === '六');
+                    if (targetGender === 'boy') {
+                        res.seats[p] = (isFrontGroup && curFrontBoys.length > 0) ? curFrontBoys.pop() : boysPool.pop();
+                    } else {
+                        res.seats[p] = (isFrontGroup && curFrontGirls.length > 0) ? curFrontGirls.pop() : girlsPool.pop();
+                    }
+                }
+            }
+
+            const members = Object.values(res.seats);
+            for (let [r1, r2] of restrictions) {
+                if (members.includes(r1) && members.includes(r2)) { conflict = true; break; }
+            }
+            if (conflict) break;
+            tempGroups.push(res);
+        }
+
+        if (!conflict && tempGroups.length === 6) {
+            resultGroups = tempGroups;
+            break;
+        }
+    }
+
+    if (resultGroups.length === 0) alert("無法生成，請檢查限制是否過多。");
+    else render(resultGroups, fixedStudents, frontRaw);
+}
+
+function render(groups, fixedSet, frontList) {
+    const leftCol = document.getElementById('left-col');
+    const rightCol = document.getElementById('right-col');
+    leftCol.innerHTML = ''; rightCol.innerHTML = '';
+
+    groups.forEach(g => {
+        const box = document.createElement('div');
+        box.className = 'group-box';
+        const isLeft = ['一', '二', '三'].includes(g.id);
+        const label = `<div class="group-label ${isLeft ? 'label-left' : 'label-right'}">第${g.id}組</div>`;
+        
+        const getSeatHtml = (p) => {
+            const num = g.seats[p];
+            if (!num) return '<div></div>';
+            const genderClass = num <= 13 ? 'boy' : 'girl';
+            const markClass = fixedSet.has(num) ? 'mark-fixed' : (frontList.includes(num) ? 'mark-front' : '');
+            return `<div class="seat ${genderClass} ${markClass}"><span>${p}</span>${num}</div>`;
+        };
+
+        let seatsHtml = '';
+        if (g.id !== '三') {
+            seatsHtml = `<div class="seats-grid grid-2x2">
+                ${getSeatHtml('C')}${getSeatHtml('A')}
+                ${getSeatHtml('D')}${getSeatHtml('B')}
+            </div>`;
+        } else {
+            seatsHtml = `<div class="seats-grid grid-3-2">
+                ${getSeatHtml('E')}${getSeatHtml('A')}${getSeatHtml('B')}
+                <div></div>${getSeatHtml('C')}${getSeatHtml('D')}
+            </div>`;
+        }
+        box.innerHTML = isLeft ? label + seatsHtml : seatsHtml + label;
+        (isLeft ? leftCol : rightCol).appendChild(box);
+    });
+}
+
+// 初始加一列指定座位
+addFixedRow();
+</script>
+
+</body>
+</html>
